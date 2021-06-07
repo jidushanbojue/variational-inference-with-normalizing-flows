@@ -39,7 +39,7 @@ def plot_density(density, directory):
 
     z = np.c_[x1, x2]
     z = torch.FloatTensor(z)
-    z = Variable(z)
+    # z = Variable(z)
 
     density_values = density(z).data.numpy().reshape(shape)
 

@@ -3,7 +3,7 @@ import argparse
 import torch
 from torch.autograd import Variable
 from torch import optim
-from mag.experiment import Experiment
+from maggot.experiment import Experiment
 
 from visualization import plot_density, scatter_points
 from utils import random_normal_samples
@@ -46,13 +46,15 @@ with Experiment({
     config = experiment.config
     experiment.register_directory("samples")
     experiment.register_directory("distributions")
+    print(experiment.directories.distributions)
 
     flow = NormalizingFlow(dim=2, flow_length=config.flow_length)
     bound = FreeEnergyBound(density=p_z)
     optimizer = optim.RMSprop(flow.parameters(), lr=config.initial_lr)
     scheduler = optim.lr_scheduler.ExponentialLR(optimizer, config.lr_decay)
 
-    plot_density(p_z, directory=experiment.distributions)
+    plot_density(p_z, directory=experiment.directories.distributions)
+    # plot_density(p_z, directory='./')
 
     def should_log(iteration):
         return iteration % args.log_interval == 0
@@ -62,7 +64,7 @@ with Experiment({
 
     for iteration in range(1, config.iterations + 1):
 
-        scheduler.step()
+        # scheduler.step()
 
         samples = Variable(random_normal_samples(config.batch_size))
         zk, log_jacobians = flow(samples)
@@ -71,16 +73,18 @@ with Experiment({
         loss = bound(zk, log_jacobians)
         loss.backward()
         optimizer.step()
+        scheduler.step()
 
         if should_log(iteration):
-            print("Loss on iteration {}: {}".format(iteration , loss.data[0]))
+            # print("Loss on iteration {}: {}".format(iteration, loss.data[0]))
+            print('Loss on iteration {}: {}'.format(iteration, loss.item()))
 
         if should_plot(iteration):
             samples = Variable(random_normal_samples(args.plot_points))
             zk, det_grads = flow(samples)
             scatter_points(
                 zk.data.numpy(),
-                directory=experiment.samples,
+                directory=experiment.directories.samples,
                 iteration=iteration,
                 flow_length=config.flow_length
             )
